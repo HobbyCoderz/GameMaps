@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Maps - V0.5</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Game Maps</h1>
+                <select id="game-select">
+                    <option value="" disabled selected>Select a Game</option>
+                    <!-- Games populated here -->
+                </select>
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+                    <button id="add-game-btn" class="btn-primary">+ New Map</button>
+                    <button id="settings-btn" class="btn-secondary" title="Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M9.405 1.05a1 1 0 0 0-2.81 0l-.247.5a1 1 0 0 1-.753.55l-.554.072a1 1 0 0 0-.564.243l-.39.39a1 1 0 0 0-.243.564l-.072.554a1 1 0 0 1-.55.753l-.5.247a1 1 0 0 0 0 2.81l.5.247a1 1 0 0 1 .55.753l.072.554c.04.188.143.36.29.507l.39.39c.147.147.319.25.507.29l.554.072a1 1 0 0 1 .753.55l.247.5a1 1 0 0 0 2.81 0l.247-.5a1 1 0 0 1 .753-.55l.554-.072c.188-.04.36-.143.507-.29l.39-.39c.147-.147.25-.319.29-.507l.072-.554a1 1 0 0 1 .55-.753l.5-.247a1 1 0 0 0 0-2.81l-.5-.247a1 1 0 0 1-.55-.753l-.072-.554a1 1 0 0 0-.29-.507l-.39-.39a1 1 0 0 0-.507-.29l-.554-.072a1 1 0 0 1-.753-.55l-.247-.5zM8 10.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="sidebar-controls">
+                    <label class="control-checkbox">
+                        <input type="checkbox" id="sort-alpha">
+                        Sort Alphabetically
+                    </label>
+                    <label class="control-checkbox">
+                        <input type="checkbox" id="group-type">
+                        Group by Type
+                    </label>
+                    <input type="text" id="filter-text" placeholder="Filter markers..." class="filter-input">
+                </div>
+            </div>
+
+            <!-- Hidden Settings Section -->
+            <div id="settings-section" class="settings-section hidden" style="display:flex;flex-direction:column;padding:12px 20px;border-bottom:1px solid var(--border);">
+                <h3 style="color:var(--accent);margin-bottom:8px;">Settings</h3>
+                <!-- Future settings controls go here -->
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label for="sidebar-zoom-level" style="font-weight: 500; font-size: 0.9em;">Sidebar Marker Zoom Level</label>
+                    <select id="sidebar-zoom-level" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--border); background-color: var(--input-bg);">
+                        <option value="-2">Zoom Out (-2)</option>
+                        <option value="-1">Zoom Out (-1)</option>
+                        <option value="0">Default (0)</option>
+                        <option value="1" selected>Zoom In (1)</option>
+                        <option value="2">Max Zoom In (2)</option>
+                    </select>
+                </div>
+                <div style="margin-top:8px; display:flex; gap:8px;">
+                    <button id="delete-map-btn" class="btn-secondary" style="width:100%;">Delete Map</button>
+                </div>
+                <div style="margin-top:8px;">
+                    <button id="info-modal-btn" class="btn-secondary" style="width:100%;">INFO</button>
+                    <p style="margin-top:8px; font-size: 0.8em; color: var(--text-secondary);">
+                        All icons are by contributors at
+                        <a href="https://game-icons.net/" target="_blank" style="color: var(--accent);">Game-icons.net</a>
+                        and are licensed under the
+                        <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" style="color: var(--accent);">Creative Commons Attribution 3.0 Unported License</a>.
+                    </p>
+                </div>
+            </div>
+
+            <div id="marker-list" class="marker-list">
+                <!-- Markers list -->
+            </div>
+        </aside>
+
+        <main class="map-container">
+            <div id="map"></div>
+        </main>
+    </div>
+
+    <!-- Add Game Modal -->
+    <div id="add-game-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Add New Game Map</h2>
+            <form id="add-game-form">
+                <div class="form-group">
+                    <label>Game Name</label>
+                    <input type="text" name="name" required placeholder="e.g. Elden Ring">
+                </div>
+                <div class="form-group">
+                    <label>Map Image Filename</label>
+                    <input type="text" name="map_path" required
+                        placeholder="e.g. elden_ring.jpg (must be in maps/ folder)">
+                    <small>Place image in <code>maps/</code> folder first</small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancel-game-btn">Cancel</button>
+                    <button type="submit" class="btn-primary">Add Game</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Marker Modal -->
+    <div id="add-marker-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="marker-modal-title">Add Marker</h2>
+            <form id="add-marker-form">
+                <input type="hidden" name="lat">
+                <input type="hidden" name="lng">
+                <input type="hidden" name="id">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select name="type">
+                        <option value="default">Default</option>
+                        <option value="base">Base</option>
+                        <option value="bomb">Bomb</option>
+                        <option value="danger">Danger</option>
+                        <option value="electrical">Electrical</option>
+                        <option value="factory">Factory</option>
+                        <option value="food">Food</option>
+                        <option value="military">Military</option>
+                        <option value="mountain">Mountain</option>
+                        <option value="resource">Resource</option>
+                        <option value="tools">Tools</option>
+                        <option value="valuables">Valuables</option>
+                        <option value="village">Village</option>
+                        <option value="weapons">Weapons</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>In-Game Coordinates</label>
+                    <input type="text" name="game_coords" placeholder="X: 100, Y: 200">
+                </div>
+                <div class="form-group">
+                    <label>Note</label>
+                    <textarea name="note" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Image (Optional)</label>
+                    <input type="file" name="image_file" accept="image/*">
+                    <div id="current-image-preview" style="margin-top: 5px; font-size: 0.9em; color: #666;"></div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancel-marker-btn">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Marker</button>
+                </div>
+            
+            </form>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Information</h2>
+            <p>CTRL + click to add map markers.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="close-info-modal-btn">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>
