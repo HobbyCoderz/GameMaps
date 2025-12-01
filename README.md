@@ -28,6 +28,7 @@ If you use `uv` for environment management:
 ```bash
 uv venv
 .venv\Scripts\activate
+uv pip install -r requirements.txt
 ```
 
 ### Using Python's venv
@@ -37,7 +38,7 @@ If you prefer Python's built-in `venv`:
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Preparing Your Game Map
