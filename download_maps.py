@@ -21,32 +21,31 @@ def harvest_tiles():
     total_expected = len(X_RANGE) * len(Y_RANGE)
     initial_count = len(list(SAVE_DIR.glob("*.webp")))
     
-    # Track stats for the final report
     downloaded_count = 0
     skipped_count = 0
 
     console.print(Panel(
         f"[bold green]TILE HARVESTER ONLINE[/bold green]\n"
-        f"[green]Target Grid:[/green] {len(X_RANGE)}x{len(Y_RANGE)}\n"
-        f"[green]Local Inventory:[/green] {initial_count} / {total_expected} tiles",
+        f"[green]Grid:[/green] {len(X_RANGE)}x{len(Y_RANGE)} | [green]Initial:[/green] {initial_count}/{total_expected}",
         border_style="green"
     ))
 
     session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TileScanner/2.1"
-    })
+    session.headers.update({"User-Agent": "TileScanner/2.1"})
 
     with Progress(
         SpinnerColumn(spinner_name="dots", style="bold green"),
-        TextColumn("[bold green]{task.description} [white]({task.completed}/{task.total})[/white]"),
+        # Removed table_column_id to fix the TypeError
+        TextColumn("[bold green]STATUS:[/bold green] {task.fields[status]}"),
         BarColumn(bar_width=None, style="dim green", complete_style="green"),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         TimeRemainingColumn(),
         console=console,
+        refresh_per_second=10 
     ) as progress:
 
-        task = progress.add_task("Processing...", total=total_expected)
+        # Initialize the task with a default 'status' field
+        task = progress.add_task("Syncing", total=total_expected, status="Booting...")
 
         for x in X_RANGE:
             for y in Y_RANGE:
@@ -55,38 +54,30 @@ def harvest_tiles():
                 
                 # Check for existing files
                 if file_path.exists() and file_path.stat().st_size > 0:
-                    progress.console.print(f"[dim str]  [skipping][/dim str] {filename} exists, skipping..")
+                    progress.update(task, status=f"Skipping {filename}", advance=1)
                     skipped_count += 1
-                    progress.advance(task)
                     continue
 
-                url = f"{BASE_URL}/{x}/{y}.webp"
-                
                 try:
-                    response = session.get(url, timeout=10)
+                    response = session.get(f"{BASE_URL}/{x}/{y}.webp", timeout=10)
                     if response.status_code == 200:
                         with open(file_path, "wb") as f:
                             f.write(response.content)
-                        progress.console.print(f"[bold green]  [downloaded][/bold green] {filename}")
+                        progress.update(task, status=f"Fetched {filename}", advance=1)
                         downloaded_count += 1
                         time.sleep(DELAY)
                     elif response.status_code == 404:
-                        progress.console.print(f"[dim yellow]  [not found][/dim yellow] {filename} (404)")
+                        progress.update(task, status=f"Missing {filename} (404)", advance=1)
                     else:
-                        progress.console.print(f"[bold red]  [error][/bold red] {filename} - Status {response.status_code}")
+                        progress.update(task, status=f"Error {response.status_code}", advance=1)
                 
-                except Exception as e:
-                    progress.console.print(f"[bold red]  [failed][/bold red] {filename}: {e}")
-                    time.sleep(1) 
-                
-                progress.advance(task)
+                except Exception:
+                    progress.update(task, status="Retry link...", advance=1)
+                    time.sleep(1)
 
-    # Final summary panel
     console.print(Panel(
-        f"[bold green]SYNCHRONIZATION COMPLETE[/bold green]\n\n"
-        f"Files Skipped: {skipped_count}\n"
-        f"Files Downloaded: {downloaded_count}\n"
-        f"Total Status: [white]{len(list(SAVE_DIR.glob('*.webp')))}[/white] / {total_expected} tiles present.",
+        f"[bold green]SYNCHRONIZATION COMPLETE[/bold green]\n"
+        f"New: {downloaded_count} | Skipped: {skipped_count}",
         border_style="green"
     ))
 
