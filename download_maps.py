@@ -20,38 +20,41 @@ def harvest_tiles():
     
     total_expected = len(X_RANGE) * len(Y_RANGE)
     
-    # 1. Validation Phase
-    existing_files = list(SAVE_DIR.glob("*.webp"))
+    # Calculate initial state for the UI
+    initial_count = len(list(SAVE_DIR.glob("*.webp")))
+    
     console.print(Panel(
         f"[bold green]TILE HARVESTER ONLINE[/bold green]\n"
         f"[green]Target Grid:[/green] {len(X_RANGE)}x{len(Y_RANGE)}\n"
-        f"[green]Local Inventory:[/green] {len(existing_files)} / {total_expected} tiles",
+        f"[green]Status:[/green] [white]Resume Mode Active[/white]\n"
+        f"[green]Initial Inventory:[/green] {initial_count} / {total_expected} tiles",
         border_style="green"
     ))
 
-    # 2. Network Session
     session = requests.Session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TileScanner/2.1"
     })
 
-    # Use 'dots' instead of 'binary' to avoid KeyError
     with Progress(
         SpinnerColumn(spinner_name="dots", style="bold green"),
-        TextColumn("[bold green]{task.description}"),
+        # Added {task.completed} to the TextColumn to show live inventory count
+        TextColumn("[bold green]{task.description} [white]({task.completed}/{task.total})[/white]"),
         BarColumn(bar_width=None, style="dim green", complete_style="green"),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         TimeRemainingColumn(),
         console=console,
     ) as progress:
 
-        task = progress.add_task("Synchronizing...", total=total_expected)
+        task = progress.add_task("Syncing Database...", total=total_expected)
 
         for x in X_RANGE:
             for y in Y_RANGE:
                 filename = f"{x}-{y}.webp"
                 file_path = SAVE_DIR / filename
                 
+                # --- RESUME LOGIC ---
+                # If file exists and isn't 0 bytes, skip it
                 if file_path.exists() and file_path.stat().st_size > 0:
                     progress.advance(task)
                     continue
@@ -63,15 +66,19 @@ def harvest_tiles():
                     if response.status_code == 200:
                         with open(file_path, "wb") as f:
                             f.write(response.content)
+                        # Respectful delay
                         time.sleep(DELAY)
                     elif response.status_code == 404:
-                        # Some maps aren't perfect squares; skip 404s quietly
-                        pass
+                        # Mark as "done" so the bar moves, even if file doesn't exist on server
+                        progress.advance(task)
+                        continue
                     else:
                         progress.console.print(f"[red]![/red] Server Error {response.status_code} at {x}-{y}")
                 
                 except Exception as e:
                     progress.console.print(f"[bold red]![/bold red] Link severed at {x}-{y}: {e}")
+                    # Brief pause if connection fails to prevent spamming errors
+                    time.sleep(1) 
                 
                 progress.advance(task)
 
