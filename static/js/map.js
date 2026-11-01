@@ -9,7 +9,7 @@ let currentGameId = null;
 function initMap() {
     map = L.map('map', {
         crs: L.CRS.Simple,
-        minZoom: -2,
+        minZoom: -4,
         maxZoom: 2,
         zoomControl: false
     });

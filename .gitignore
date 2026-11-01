@@ -16,3 +16,5 @@ static/uploads/*
 data/gamemaps.db
 maps/
 Notes/
+*.har
+tiles/
